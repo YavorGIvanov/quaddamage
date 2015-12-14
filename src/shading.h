@@ -39,12 +39,31 @@ public:
 	virtual ~Texture() {}
 };
 
+class MandelbrotFract : public Texture{
+public:
+	// color1 - in the set of mandelbrot
+	// color2 - for points outside of the set of mandelbrot
+	Color color1, color2; 
+	//a number on which we will divide the inputed u and v coordinates
+	double scaling;
+
+	static const unsigned palitreSIZE = 10;
+	Color palitre[palitreSIZE];
+	bool isSetPalitre;
+
+	MandelbrotFract(): isSetPalitre(false) { 
+		color1.makeZero(); color2.makeZero(); scaling = 1; 
+	}
+	virtual Color sample(const IntersectionInfo& info);
+	void setUpPalitre();
+};
 class CheckerTexture: public Texture {
 public:
 	Color color1, color2;
 	double scaling;
 	CheckerTexture() { color1.makeZero(); color2.makeZero(); scaling = 1; }
 	virtual Color sample(const IntersectionInfo& info);
+	void setUpPalitre();
 };
 
 class Bitmap;

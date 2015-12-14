@@ -23,12 +23,51 @@
  */
 #include "shading.h"
 #include "bitmap.h"
+#include "constants.h"
+#include <iostream>
 
-bool visibilityCheck(const Vector& start, const Vector& end);
+bool visibilityCheck(const Vector &start, const Vector &end);
 
 extern Vector lightPos;
 extern double lightIntensity;
 extern Color ambientLight;
+
+void MandelbrotFract::setUpPalitre(){
+	double divisor;
+	for (unsigned i = 0; i < palitreSIZE; i++){
+		divisor = (palitreSIZE - i)/3.6;
+		palitre[i] = color2 / divisor;
+	}
+	isSetPalitre = true;
+}
+
+Color MandelbrotFract::sample(const IntersectionInfo &info) {
+	
+	double cReal = (-2.5 + (info.u * 3.5)); //< in the interval (-2.5,1)
+	double cImag = (1 + (info.v * 2.0)); //< in the interval (-1, 1)
+	double sc = log(scaling) / 1.5;
+	cReal *= sc;
+	cImag *= sc;
+	unsigned MaxIterations = 50, iter = 0; //< 50 is a decent value
+	double zReal = 0, zImag = 0, zRealSq = 0, zImagSq = 0;
+	//Setting up the palitre for the color around the fractal
+	if (!isSetPalitre){
+		setUpPalitre();
+	}
+
+  while (iter < MaxIterations && zRealSq + zImagSq < 4.0) {
+    zRealSq = zReal * zReal;
+    zImagSq = zImag * zImag;
+    zImag = 2.0 * zReal * zImag + cImag;
+    zReal = zRealSq - zImagSq + cReal;
+    iter++;
+  }
+  if (iter == MaxIterations){
+	  return color1;
+  }
+  unsigned index = (unsigned)ceil(((double)iter / MaxIterations)*palitreSIZE) % palitreSIZE;
+  return palitre[index];
+}
 
 Color CheckerTexture::sample(const IntersectionInfo& info)
 {

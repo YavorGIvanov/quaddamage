@@ -24,6 +24,7 @@
 #include "geometry.h"
 #include "constants.h"
 #include <algorithm>
+#include <iostream>
 using std::vector;
 
 bool Plane::intersect(const Ray& ray, IntersectionInfo& info)
@@ -109,8 +110,8 @@ bool Cube::intersectSide(double level, double start, double dir, const Ray& ray,
 		info.ip = ip;
 		info.distance = distance;
 		info.normal = normal;
-		info.u = info.ip.x + info.ip.z;
-		info.v = info.ip.y;
+		info.u = 1.0/(info.ip.x + info.ip.z);
+		info.v = 1.0/info.ip.y;
 		info.geom = this;
 		return true;
 	}

@@ -19,6 +19,7 @@ vector<Node> nodes;
 Plane plane;
 CheckerTexture checker;
 CheckerTexture ceilingTex;
+MandelbrotFract Redfrac;
 Plane plane2;
 Sphere s1;
 Cube cube;
@@ -36,9 +37,9 @@ int maxRaytraceDepth = 10;
 void setupScene()
 {
 	ambientLight = Color(1, 1, 1) * 0.1f;
-	camera.position = Vector(0, 60, -120);
-	camera.yaw = 0;
-	camera.pitch = -30;
+	camera.position = Vector(60, 120, 20);
+	camera.yaw = 150;
+	camera.pitch = -60;
 	camera.roll = 0;
 	camera.fov = 90;
 	camera.aspectRatio = float(frameWidth()) / float(frameHeight());
@@ -50,12 +51,16 @@ void setupScene()
 	ceilingTex.color1 = Color(0.5, 0.5, 0.5);
 	ceilingTex.color2 = Color(0.5, 0.5, 0.5);
 	Texture* plochki = new BitmapTexture("data/floor.bmp", 100);
-	pod.texture = plochki;
-	
+	Redfrac.color1 = Color(0, 0, 0);
+	Redfrac.color2 = Color(1, 0, 0);
+	Redfrac.scaling = 60;
+	pod.texture = &Redfrac;
 	Layered* layeredPod = new Layered;
 	layeredPod->addLayer(&pod, Color(1, 1, 1));
 	layeredPod->addLayer(new Refl(0.9), Color(1, 1, 1) * 0.02f);
 	
+	
+
 	ceiling.texture = &ceilingTex;
 	nodes.push_back({ &plane, layeredPod });
 	//nodes.push_back({ &plane2, &ceiling });
@@ -74,17 +79,20 @@ void setupScene()
 	blue.color2 = Color(0.4f, 0.4f, 0.4f);
 	blue.scaling = 2;
 	
-	ball.texture = new BitmapTexture("data/world.bmp");
+
+
+	ball.texture = &Redfrac;
 	ball.specularExponent = 200;
 	ball.specularMultiplier = 0.5;
+
+	
 	
 	Layered* glass = new Layered;
 	const double IOR_GLASS = 1.6;
-	glass->addLayer(new Refr(IOR_GLASS, 0.9), Color(1, 1, 1));
+	glass->addLayer(new Refr(IOR_GLASS, 0.9), Color(1,1,1));
 	glass->addLayer(new Refl(0.9), Color(1, 1, 1), new Fresnel(IOR_GLASS));
-	
-	nodes.push_back({ &s1, glass });
-	
+	nodes.push_back({ &s1, &ball });
+
 	environment = new CubemapEnvironment("data/env/forest");
 	
 	camera.frameBegin();
