@@ -27,6 +27,8 @@
 #include "geometry.h"
 #include "color.h"
 
+void genDiscPoint(double radius, double& x, double& y);
+
 class Shader {
 public:
 	virtual Color shade(const Ray& ray, const IntersectionInfo& info) = 0;

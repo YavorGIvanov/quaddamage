@@ -136,7 +136,22 @@ bool visibilityCheck(const Vector& start, const Vector& end)
 	return true;
 }
 
-void render()
+void render(){
+	
+	double x, y;
+	double radius = 200;
+	int ix, iy;
+	for (unsigned i = 0; i < 300000; i++){
+		genDiscPoint(radius, x, y);
+		x += 200;
+		y += 200;
+		ix = floor(x); //< not that we need floor for real but meh ..
+		iy = floor(y);
+		vfb[iy][ix] += Color(0.1, 0.1, 0.1);
+	}
+}
+
+void renderReal()
 {
 	const double kernel[5][2] = {
 		{ 0.0, 0.0 },

@@ -113,6 +113,16 @@ Color BitmapTexture::sample(const IntersectionInfo& info)
 
 extern Color raytrace(Ray ray);
 
+void genDiscPoint(double radius, double& x, double& y){
+	double angle = randomFloat() * 2 * PI;
+	//The only change we make from the function before 
+	//is the sqrt on the randomFloat();
+	double pointRadius = sqrt(randomFloat()) * radius;
+	x = cos(angle) * pointRadius;
+	y = sin(angle) * pointRadius;
+
+}
+
 Color Refl::shade(const Ray& ray, const IntersectionInfo& info)
 {
 	Vector n = faceforward(ray.dir, info.normal);
@@ -132,11 +142,9 @@ Color Refl::shade(const Ray& ray, const IntersectionInfo& info)
 		for (int i = 0; i < count; i++) {
 			Vector a, b;
 			orthonormalSystem(n, a, b);
-			double angle = randomFloat() * 2 * PI;
 			double radius = randomFloat() * 1;
 			double x, y;
-			x = cos(angle) * radius;
-			y = sin(angle) * radius;
+			genDiscPoint(radius, x, y);
 			//
 			x *= tan((1 - glossiness) * PI/2);
 			y *= tan((1 - glossiness) * PI/2);
