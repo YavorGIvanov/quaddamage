@@ -88,6 +88,36 @@ Color Phong::shade(const Ray& ray, const IntersectionInfo& info)
 		+ Color(1, 1, 1) * (phongCoeff * specularMultiplier * fromLight);
 }
 
+Color BlinnPhong::shade(const Ray& ray, const IntersectionInfo& info)
+{
+	Color diffuse = texture ? texture->sample(info) : this->color;
+
+	Vector v1 = faceforward(ray.dir, info.normal);
+	Vector v2 = lightPos - info.ip;
+	v2.normalize();
+	double lambertCoeff = dot(v1, v2);
+	double fromLight = getLightContrib(info);
+	
+	//Blinn-Phong calculations
+	Vector toCamera = -ray.dir;
+	toCamera.normalize();
+	//the half vector is equal to the (LightDir + viewDir)/||LightDir|+|viewDir||
+	Vector halfV = (v2 + toCamera);
+	halfV.normalize();
+
+	double cosGamma = dot(info.normal, halfV);
+	double blinnPhongCoeff;
+	if (cosGamma > 0)
+		blinnPhongCoeff = pow(cosGamma, specularExponent);
+	else
+		blinnPhongCoeff = 0;
+	//end of Blinn-Phong calculations
+
+	return ambientLight * diffuse
+		+ diffuse * lambertCoeff * fromLight
+		+ Color(1, 1, 1) * (blinnPhongCoeff * specularMultiplier * fromLight);
+}
+
 BitmapTexture::BitmapTexture(const char* filename, double scaling)
 {
 	bitmap = new Bitmap;

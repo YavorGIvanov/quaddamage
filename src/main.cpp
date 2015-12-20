@@ -24,7 +24,7 @@ Sphere s1;
 Cube cube;
 CheckerTexture blue;
 Lambert ceiling;
-Phong ball;
+BlinnPhong ball; //< change to Phong here to see the difference
 Lambert pod;
 Vector lightPos;
 double lightIntensity;
@@ -36,8 +36,8 @@ int maxRaytraceDepth = 10;
 void setupScene()
 {
 	ambientLight = Color(1, 1, 1) * 0.1f;
-	camera.position = Vector(0, 60, -120);
-	camera.yaw = 0;
+	camera.position = Vector(80, 60, -60);
+	camera.yaw = 60;
 	camera.pitch = -30;
 	camera.roll = 0;
 	camera.fov = 90;
@@ -83,7 +83,7 @@ void setupScene()
 	glass->addLayer(new Refr(IOR_GLASS, 0.9), Color(1, 1, 1));
 	glass->addLayer(new Refl(0.9), Color(1, 1, 1), new Fresnel(IOR_GLASS));
 	
-	nodes.push_back({ &s1, glass });
+	nodes.push_back({ &s1, &ball });
 	
 	environment = new CubemapEnvironment("data/env/forest");
 	

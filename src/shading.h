@@ -74,6 +74,15 @@ public:
 	Color shade(const Ray& ray, const IntersectionInfo& info);	
 };
 
+class BlinnPhong : public Shader {
+public:
+	Color color;
+	Texture* texture;
+	double specularMultiplier;
+	double specularExponent;
+	Color shade(const Ray& ray, const IntersectionInfo& info);
+};
+
 class Refl: public Shader {
 public:
 	double multiplier;
