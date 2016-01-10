@@ -107,7 +107,7 @@ int renderSceneThread(void* /*unused*/)
 	return 0;
 }
 
-const char* DEFAULT_SCENE = "data/heightfield.qdmg";
+const char* DEFAULT_SCENE = "data/hw9/dragon.qdmg";
 
 int main ( int argc, char** argv )
 {

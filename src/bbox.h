@@ -206,6 +206,14 @@ struct BBox {
 		left.vmax[axis] = where;
 		right.vmin[axis] = where;
 	}
+	inline double calcArea(){
+		double length, width, height;
+		length = vmax[0] - vmin[0];
+		width = vmax[1] - vmin[1];
+		height = vmax[2] - vmin[2];
+		return 2 * (width*height + width*length + height*length);
+	}
+
 };
 
 #endif // __BBOX_H__

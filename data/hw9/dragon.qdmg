@@ -63,7 +63,7 @@ Node floorNode {
 Mesh dragon {
 	useKDTree true
 	file "dragon.obj"
-	useSAH 0
+	useSAH true
 	faceted true
 }
 
