@@ -86,16 +86,15 @@ void debugRayTrace(int x, int y)
 	raytrace(ray);
 }
 
+Ray getRay(double x, double y, int whichCamera){
+	if (scene.camera->dof){
+		return scene.camera->getDOFRay(x, y, whichCamera);
+	}
+	return scene.camera->getScreenRay(x, y, whichCamera);
+}
+
 Color raytraceSinglePixel(double x, double y)
 {
-	auto getRay = scene.camera->dof ? 
-		[](double x, double y, int whichCamera) {
-			return scene.camera->getDOFRay(x, y, whichCamera);
-		} :
-		[](double x, double y, int whichCamera) {
-			return scene.camera->getScreenRay(x, y, whichCamera);
-		};
-		
 	if (scene.camera->stereoSeparation > 0) {
 		Ray leftRay = getRay(x, y, CAMERA_LEFT);
 		Ray rightRay= getRay(x, y, CAMERA_RIGHT);

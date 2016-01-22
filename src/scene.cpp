@@ -860,6 +860,7 @@ SceneElement* DefaultSceneParser::newSceneElement(const char* className)
 	if (!strcmp(className, "Const")) return new Const;
 	if (!strcmp(className, "PointLight")) return new PointLight;
 	if (!strcmp(className, "RectLight")) return new RectLight;
+	if (!strcmp(className, "SpotLight")) return new SpotLight;
 
 	return NULL;
 }

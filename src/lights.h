@@ -119,5 +119,57 @@ public:
 	
 };
 
+class SpotLight : public Light {
+	Vector pos, dir;
+	double innerAngle, outerAngle;
+public:
+	void fillProperties(ParsedBlock& pb)
+	{
+		printf("blaaaa");
+		Light::fillProperties(pb);
+		pb.getVectorProp("pos", &pos);
+		pb.getVectorProp("dir", &dir);
+		pb.getDoubleProp("innerAngle", &innerAngle);
+		pb.getDoubleProp("outerAngle", &outerAngle);
+	}
+
+	int getNumSamples()
+	{
+		return 1;
+	}
+
+	void getNthSample(int sampleIdx, const Vector& shadePos,
+		Vector& samplePos, Color& color)
+	{
+		Vector hitPointDir = shadePos - pos;
+		hitPointDir.normalize();
+		dir.normalize();
+		double cosAlpha = dot(dir,hitPointDir);
+		double angle = acos(cosAlpha)* 180.0 / PI;
+		samplePos = pos;
+		if (angle < innerAngle){
+			color = this->color * power;
+		}
+		else if (angle > outerAngle){
+			color = Color(0.0f, 0.0f, 0.0f);
+		}
+		else{
+			double coef = (angle - innerAngle) / (outerAngle - innerAngle);
+			color = (1-coef)*this->color;
+			color *= power;
+		}
+	}
+
+	bool intersect(const Ray& ray, double& intersectionDist)
+	{
+		return false; // you cannot intersect a spot light.
+	}
+
+	float solidAngle(const Vector& x)
+	{
+		return 0;
+	}
+};
+
 #endif // __LIGHTS_H__
 

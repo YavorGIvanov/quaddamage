@@ -18,16 +18,15 @@ Camera camera {
 //////////////////////// LIGHTS ////////////////////////////////////////////
 
 
-RectLight l2 {
-	xSubd 4
-	ySubd 4
-	translate	(50, 50, -20)
-	scale   (8, 8, 8)
-	color	(1, 1, 1)
-	power   62.5
-	rotate  (0, 45, 0)
+SpotLight mylight {
+	color   (1, 1, 1)
+	power   7000
+	pos     (50, 50, -20)
+	dir     (-0.727, -0.582, 0.364)
+	innerAngle 13.8
+	outerAngle 15.5
 }
-
+/*
 RectLight l_small {
 	translate  (0, 28, 50)
 	rotate     (0, -62, 0)
@@ -37,7 +36,7 @@ RectLight l_small {
 	xSubd  4
 	ySubd  4
 }
-
+*/
 
 //////////////////////// GEOMETRIES ////////////////////////////////////////
 
