@@ -98,7 +98,7 @@ public:
 class RectLight: public Light {
 	int xSubd, ySubd;
 	Transform T;
-	Vector center, a, b, c;
+	Vector center, a, b, c, d;
 	float area;
 public:
 	void beginFrame();

@@ -8,7 +8,8 @@ GlobalSettings {
 	frameWidth      640
 	frameHeight     480
 	gi                1
-	numPaths 128
+	numPaths 512
+	wantAA true
 }
 
 RectLight light1 {

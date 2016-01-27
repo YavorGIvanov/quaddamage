@@ -6,9 +6,10 @@
 void RectLight::beginFrame(void)
 {
 	center = T.point(Vector(0, 0, 0));
-	Vector a = T.point(Vector(-0.5, 0.0, -0.5));
-	Vector b = T.point(Vector( 0.5, 0.0, -0.5));
-	Vector c = T.point(Vector( 0.5, 0.0,  0.5));
+	a = T.point(Vector(-0.5, 0.0, -0.5));
+	b = T.point(Vector( 0.5, 0.0, -0.5));
+	c = T.point(Vector( 0.5, 0.0,  0.5));
+	d = T.point(Vector(-0.5, 0.0,  0.5));
 	float width = (float) (b - a).length();
 	float height = (float) (b - c).length();
 	area = width * height; // obtain the area of the light, in world space
@@ -64,11 +65,38 @@ bool RectLight::intersect(const Ray& ray, double& intersectionDist)
 
 float RectLight::solidAngle(const Vector& x)
 {
-	Vector x_canonic = T.undoPoint(x);
-	if (x_canonic.y >= 0) return 0;
-	Vector x_dir = normalize(x_canonic);
-	float cosA = dot(x_dir, Vector(0, -1, 0));
-	double d = (x - center).lengthSqr();
-	return area * cosA / (1 + d);
+	///Find the projections
+	Vector prA, prB, prC, prD;
+	prA = (a - x);
+	prA.normalize();
+	prB = (b - x);
+	prB.normalize();
+	prC = (c - x);
+	prC.normalize();
+	prD = (d - x);
+	prD.normalize();
+
+	///Find the normal vectors of the planes
+	Vector n1, n2, n3, n4;
+	n1 = prB^prA;
+	n1.normalize();
+	n2 = prC^prB;
+	n2.normalize();
+	n3 = prD^prC;
+	n3.normalize();
+	n4 = prA^prD;
+	n4.normalize();
+
+	///Find the dihedral angles
+	float angle1, angle2, angle3, angle4;
+	angle1 = acos(dot(n1, n2));
+	angle2 = acos(dot(n2, n3));
+	angle3 = acos(dot(n3, n4));
+	angle4 = acos(dot(n4, n1));
+
+	///Calculate the area
+	return fabs(angle1 + angle2 + angle3 + angle4 - 2*PI);
+
+	
 }
 

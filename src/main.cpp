@@ -206,25 +206,25 @@ void debugRayTrace(int x, int y)
 	raytrace(ray);
 }
 
+Ray getRay(double x, double y, int whichCamera){
+	if (scene.camera->dof){
+		return scene.camera->getDOFRay(x, y, whichCamera);
+	}
+	return scene.camera->getScreenRay(x, y, whichCamera);
+	
+}
+
+Color trace(const Ray ray){
+	if (scene.settings.gi){
+		Random& rnd = getRandomGen();
+		return pathtrace(ray, Color(1, 1, 1), rnd);
+	}
+	return raytrace(ray);
+}
+
 Color raytraceSinglePixel(double x, double y)
 {
-	auto getRay = scene.camera->dof ? 
-		[](double x, double y, int whichCamera) {
-			return scene.camera->getDOFRay(x, y, whichCamera);
-		} :
-		[](double x, double y, int whichCamera) {
-			return scene.camera->getScreenRay(x, y, whichCamera);
-		};
 	
-	auto trace = scene.settings.gi ? 
-		[](const Ray& ray) { 
-			Random& rnd = getRandomGen();
-			return pathtrace(ray, Color(1, 1, 1), rnd); 
-		} :
-		[](const Ray& ray) { 
-			return raytrace(ray); 
-		};
-		
 	if (scene.camera->stereoSeparation > 0) {
 		Ray leftRay = getRay(x, y, CAMERA_LEFT);
 		Ray rightRay= getRay(x, y, CAMERA_RIGHT);
@@ -336,7 +336,7 @@ int renderSceneThread(void* /*unused*/)
 	return 0;
 }
 
-const char* DEFAULT_SCENE = "data/smallpt.qdmg";
+const char* DEFAULT_SCENE = "data/hw12/sphtri.qdmg";
 
 int main ( int argc, char** argv )
 {
