@@ -4,12 +4,14 @@
 //
 
 GlobalSettings {
-	frameWidth          640
-	frameHeight         480
+	frameWidth          320
+	frameHeight         240
 	maxTraceDepth 8
 	ambientLight (0.1, 0.1, 0.1)
 	gi 			on
-	numPaths 	40
+	numPaths 	1
+	fullscreen true
+	interactive true
 }
 
 Camera camera {

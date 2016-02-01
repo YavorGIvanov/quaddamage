@@ -20,6 +20,7 @@ using std::vector;
 
 
 Color vfb[VFB_MAX_SIZE][VFB_MAX_SIZE];
+Color accum[VFB_MAX_SIZE][VFB_MAX_SIZE] = { Color(0, 0, 0) };
 
 bool visibilityCheck(const Vector& start, const Vector& end);
 ThreadPool pool;
@@ -209,26 +210,22 @@ void debugRayTrace(int x, int y)
 	ray.flags |= RF_DEBUG;
 	raytrace(ray);
 }
+Ray getRay(double x, double y, int whichCamera) {
+  if (scene.camera->dof) {
+    return scene.camera->getDOFRay(x, y, whichCamera);
+  }
+  return scene.camera->getScreenRay(x, y, whichCamera);
+}
 
+Color trace(const Ray ray) {
+  if (scene.settings.gi) {
+    Random &rnd = getRandomGen();
+    return pathtrace(ray, Color(1, 1, 1), rnd);
+  }
+  return raytrace(ray);
+}
 Color raytraceSinglePixel(double x, double y)
-{
-	auto getRay = scene.camera->dof ? 
-		[](double x, double y, int whichCamera) {
-			return scene.camera->getDOFRay(x, y, whichCamera);
-		} :
-		[](double x, double y, int whichCamera) {
-			return scene.camera->getScreenRay(x, y, whichCamera);
-		};
-	
-	auto trace = scene.settings.gi ? 
-		[](const Ray& ray) { 
-			Random& rnd = getRandomGen();
-			return pathtrace(ray, Color(1, 1, 1), rnd); 
-		} :
-		[](const Ray& ray) { 
-			return raytrace(ray); 
-		};
-		
+{	
 	if (scene.camera->stereoSeparation > 0) {
 		Ray leftRay = getRay(x, y, CAMERA_LEFT);
 		Ray rightRay= getRay(x, y, CAMERA_RIGHT);
@@ -302,7 +299,6 @@ Color renderPixel(int x, int y)
 		}
 	}
 }
-
 class MTRend: public Parallel {
 	const vector<Rect>& buckets;
 	InterlockedInt counter;
@@ -313,13 +309,25 @@ public:
 	void entry(int threadIdx, int threadCount)
 	{
 		int i;
-		while ((i = counter++) < int(buckets.size())) {
-			const Rect& r = buckets[i];
-			for (int y = r.y0; y < r.y1; y++)
-				for (int x = r.x0; x < r.x1; x++) {
-					vfb[y][x] = renderPixel(x, y);
-				}
-			if (!scene.settings.interactive && !displayVFBRect(r, vfb)) return;
+		if (scene.settings.interactive){
+			while ((i = counter++) < int(buckets.size())) {
+				const Rect& r = buckets[i];
+				for (int y = r.y0; y < r.y1; y++)
+					for (int x = r.x0; x < r.x1; x++) {
+						accum[y][x] += renderPixel(x, y);
+					}
+				if (!scene.settings.interactive && !displayVFBRect(r, accum)) return;
+			}
+		}
+		else {
+			while ((i = counter++) < int(buckets.size())) {
+				const Rect& r = buckets[i];
+				for (int y = r.y0; y < r.y1; y++)
+					for (int x = r.x0; x < r.x1; x++) {
+						vfb[y][x] = renderPixel(x, y);
+					}
+				if (!displayVFBRect(r, vfb)) return;
+			}
 		}
 	}
 };
@@ -366,16 +374,15 @@ void mainloop(void)
 	const double MOVEMENT_PER_SEC = 20;
 	const double ROTATION_PER_SEC = 50;
 	const double SENSITIVITY = 0.1;
-	
+	int accumFrames = 1;
 	while (running) {
 		Uint32 ticksSaved = SDL_GetTicks();
 		render();
-		displayVFB(vfb);
+		displayVFB(accum,accumFrames);
 		// timeDelta is how much time the frame took to render:
 		double timeDelta = (SDL_GetTicks() - ticksSaved) / 1000.0;
 		// 
 		SDL_Event ev;
-		
 		while (SDL_PollEvent(&ev)) {
 			switch (ev.type) {
 				case SDL_QUIT:
@@ -408,10 +415,25 @@ void mainloop(void)
 		if (keystate[SDLK_KP4]) cam.rotate(+rotation, 0);
 		if (keystate[SDLK_KP6]) cam.rotate(-rotation, 0);
 		
+
 		int deltax, deltay;
 		SDL_GetRelativeMouseState(&deltax, &deltay);
 		cam.rotate(-SENSITIVITY * deltax, -SENSITIVITY*deltay);
+
+		if (keystate[SDLK_UP] || keystate[SDLK_DOWN] || keystate[SDLK_LEFT] ||
+			keystate[SDLK_RIGHT] || keystate[SDLK_KP8] || keystate[SDLK_KP2] ||
+			keystate[SDLK_KP4] || keystate[SDLK_KP6] || (deltax != 0 && deltay != 0)){
+			accumFrames = 1;
+			int frameH = frameHeight(), frameW = frameWidth();
+			for (int i = 0; i < frameH; i++){
+				for (int j = 0; j < frameW; j++){
+					accum[i][j].makeZero();
+				}
+			}
+		}
+		accumFrames++;
 	}
+	
 }
 
 const char* DEFAULT_SCENE = "data/smallpt.qdmg";
@@ -448,7 +470,7 @@ int main ( int argc, char** argv )
 		printf("Render took %.2fs\n", elapsedMs / 1000.0f);
 		setWindowCaption("Quad Damage: rendered in %.2fs\n", elapsedMs / 1000.0f);
 		
-		displayVFB(vfb);
+		displayVFB(vfb, 1);
 		waitForUserExit();
 	}
 	closeGraphics();
