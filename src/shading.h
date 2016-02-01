@@ -29,8 +29,6 @@
 #include "geometry.h"
 #include "scene.h"
 
-////1:24 vuv videoto za solid angle
-////1:34 sum stignal
 class BRDF {
 public:
 	virtual Color eval(const IntersectionInfo& x, const Vector& w_in, const Vector& w_out);
