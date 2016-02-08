@@ -20,7 +20,8 @@ using std::vector;
 
 
 Color vfb[VFB_MAX_SIZE][VFB_MAX_SIZE];
-Color accum[VFB_MAX_SIZE][VFB_MAX_SIZE] = { Color(0, 0, 0) };
+Color accum[VFB_MAX_SIZE][VFB_MAX_SIZE];
+int fragmNum = 1;
 
 bool visibilityCheck(const Vector& start, const Vector& end);
 ThreadPool pool;
@@ -314,7 +315,7 @@ public:
 				const Rect& r = buckets[i];
 				for (int y = r.y0; y < r.y1; y++)
 					for (int x = r.x0; x < r.x1; x++) {
-						accum[y][x] += renderPixel(x, y);
+						accum[y][x] = ((accum[y][x]*(fragmNum-1)) + renderPixel(x,y))/fragmNum;
 					}
 				if (!scene.settings.interactive && !displayVFBRect(r, accum)) return;
 			}
@@ -374,11 +375,10 @@ void mainloop(void)
 	const double MOVEMENT_PER_SEC = 20;
 	const double ROTATION_PER_SEC = 50;
 	const double SENSITIVITY = 0.1;
-	int accumFrames = 1;
 	while (running) {
 		Uint32 ticksSaved = SDL_GetTicks();
 		render();
-		displayVFB(accum,accumFrames);
+		displayVFB(accum);
 		// timeDelta is how much time the frame took to render:
 		double timeDelta = (SDL_GetTicks() - ticksSaved) / 1000.0;
 		// 
@@ -419,19 +419,18 @@ void mainloop(void)
 		int deltax, deltay;
 		SDL_GetRelativeMouseState(&deltax, &deltay);
 		cam.rotate(-SENSITIVITY * deltax, -SENSITIVITY*deltay);
-
+		fragmNum++;
 		if (keystate[SDLK_UP] || keystate[SDLK_DOWN] || keystate[SDLK_LEFT] ||
 			keystate[SDLK_RIGHT] || keystate[SDLK_KP8] || keystate[SDLK_KP2] ||
 			keystate[SDLK_KP4] || keystate[SDLK_KP6] || (deltax != 0 && deltay != 0)){
-			accumFrames = 1;
 			int frameH = frameHeight(), frameW = frameWidth();
 			for (int i = 0; i < frameH; i++){
 				for (int j = 0; j < frameW; j++){
 					accum[i][j].makeZero();
 				}
 			}
+			fragmNum = 1;
 		}
-		accumFrames++;
 	}
 	
 }
@@ -470,7 +469,7 @@ int main ( int argc, char** argv )
 		printf("Render took %.2fs\n", elapsedMs / 1000.0f);
 		setWindowCaption("Quad Damage: rendered in %.2fs\n", elapsedMs / 1000.0f);
 		
-		displayVFB(vfb, 1);
+		displayVFB(vfb);
 		waitForUserExit();
 	}
 	closeGraphics();
