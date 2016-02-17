@@ -75,26 +75,48 @@ class Mesh: public Geometry {
 	bool intersectTriangle(const RRay& ray, const Triangle& t, IntersectionInfo& info);
 	void buildKD(KDTreeNode* node, BBox bbox, const std::vector<int>& triangleList, int depth);
 	bool intersectKD(KDTreeNode* node, const BBox& bbox, const RRay& ray, IntersectionInfo& info);
+	void subdivide();
+	///Subdivision helper methods:
+	std::vector<Triangle> getNeighbours(const Triangle& center) const;
+	Vector getEdgePoint(const Vector& A, const Vector& B, const Vector& C,
+		const Vector& D) const;
+    Vector getVertexPoint(const Vector& vertex, std::vector<Vector>& adjacent) const;
+    void computeEdgePoints(const Triangle& currentT,
+						   std::vector<Triangle>& commonSideNeighbours,
+                           Vector edgePoints[3]) const;
+    void computeVertexPoints(const std::vector<Triangle> &neighbours,
+                             const Triangle& currentT,
+							 std::vector<Triangle>& commonSideNeighbours,
+                             std::vector<std::vector<Vector>> &adjacents) const;
+    void addNewTriangles(std::vector<Vector>& newVertices,
+                         std::vector<Triangle>& newTriangles,
+						 const Triangle& currentT,
+                         size_t vertexPointsIndices[3],
+						 size_t edgePointsIndices[3]) const;
+	///Vector getBarCoords(const Vector& P, const Triangle& T) const;
+        ///
 public:
 	
 	bool faceted;
 	bool backfaceCulling;
-
+	int subdivSteps;
 	Mesh() {
 		faceted = false;
 		useKDTree = true;
 		backfaceCulling = true;
 		autoSmooth = false;
+		subdivSteps = 0;
 		kdroot = NULL;
 	}
 	~Mesh();
-	
+
 	bool loadFromOBJ(const char* filename);
 	
 	void fillProperties(ParsedBlock& pb)
 	{
 		pb.getBoolProp("faceted", &faceted);
 		pb.getBoolProp("backfaceCulling", &backfaceCulling);
+		pb.getIntProp("subdivSteps", &subdivSteps, 0, 10);
 		char fn[256];
 		if (pb.getFilenameProp("file", fn)) {
 			if (!loadFromOBJ(fn)) {

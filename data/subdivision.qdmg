@@ -1,0 +1,240 @@
+//
+// An example scene, which represents the same scenery as what the initializeScene()
+// function used to create around lecture 7
+// Namely:
+//  1) A shiny floor, made of a woody Lambert shader and a mirror layer on top
+//  2) A soccer ball
+//  3) A shiny ball using a glossy shader
+//  4) Three small phong-lit balls, using red, yellow and green colors
+
+
+
+// 1. First, some global settings
+GlobalSettings {
+	frameWidth          640
+	frameHeight         480
+	ambientLight        (0.5, 0.5, 0.5)
+	interactive true
+	fullscreen true
+}
+
+PointLight sun {
+	pos            (-90, 1200, -750)
+	power          1200000
+}
+PointLight sun2 {
+	pos            (-90, 600, -50)
+	power          20000
+}
+
+// 2. A camera
+Camera camera {
+	position     (45, 120, -350)
+	aspectRatio  1.33333
+	yaw             5
+	pitch          -5
+	roll            0
+	fov            60
+}
+
+// 3. The floor node:
+Plane floor {
+	y      -0.01
+	limit    200
+}
+
+BitmapTexture wood_tex {
+	file "texture/wood.bmp"
+	scaling 100
+}
+
+Lambert floor_diffuse {
+	texture wood_tex
+}
+
+Refl mirror {
+}
+
+Fresnel mirror_fresnel {
+	ior 1.33
+}
+
+Layered floor_shader {
+	layer floor_diffuse (1, 1, 1)
+	layer mirror        (0.05, 0.05, 0.05) mirror_fresnel
+}
+
+Node floor {
+	geometry floor
+	shader   floor_shader
+}
+
+// 7. The soccer ball
+
+CheckerTexture checker {
+	color1	(0.5, 0.0, 0.0)
+	color2	(0.5, 0.0, 0.0)
+	scaling 100
+}
+
+CheckerTexture checker2 {
+	color1	(0.0, 1.0, 0.0)
+	color2	(1.0, 0.3, 0.0)
+	scaling 10
+}
+
+BitmapTexture lava_tex {
+	file "texture/lava.bmp"
+	scaling 10
+}
+
+Lambert heart_lambert {
+	texture checker
+}
+
+Lambert lava_lambert {
+	texture lava_tex
+}
+
+Phong heart_phong {
+	color             (0.5, 0.0, 0.0)
+	specularExponent  16
+}
+
+Phong cube_phong {
+	color             (0.0, 0.2, 0.2)
+	specularExponent  32
+}
+
+Refl puramid_refl {
+	
+}
+
+
+Mesh heart {
+	file "geom/heart.obj"
+	subdivSteps 1
+}
+
+Node heart {
+	geometry heart
+	shader   heart_phong
+	translate (-60, 60, -60)
+	scale (20, 20, 20)
+	rotate (90, 0, 0)
+}
+
+Mesh heart2 {
+	file "geom/heart.obj"
+	subdivSteps 0
+}
+
+Node heart2 {
+	geometry heart2
+	shader   heart_phong
+	translate (-60, 160, -60)
+	scale (20, 20, 20)
+	rotate (90, 0, 0)
+}
+
+///Mesh teapot {
+///	file "geom/teapot_lowres.obj"
+//	faceted false
+//	subdivSteps 1
+//}
+//Node teapot {
+//	geometry teapot
+//	shader cube_phong
+//	translate (-50, 0, 0)
+//	scale (55, 55, 55)
+//}
+
+//Mesh truncated_cube  {
+//	file "geom/truncated_cube.obj"
+//	subdivSteps 1
+//	faceted true
+//	backfaceCulling true
+//}
+
+//Node truncated_cube {
+//	geometry truncated_cube
+//	shader teapot_lambert
+//	translate (-30, 45, -20)
+//	scale (10, 10, 10)
+//}
+
+Mesh pyramid  {
+	file "geom/3pyramid.obj"
+	subdivSteps 3
+	//autoSmooth true
+	faceted false
+}
+
+
+Node pyramid {
+	geometry pyramid
+	shader puramid_refl
+	translate (20, 215, -20)
+	scale (85, 85, 85)
+}
+
+Mesh pyramid2 {
+	file "geom/3pyramid.obj"
+	subdivSteps 2
+	faceted true
+}
+
+Node pyramid2 {
+	geometry pyramid2
+	shader cube_phong
+	translate (100, 215, -20)
+	scale (85, 85, 85)
+}
+
+Mesh cube  {
+	file "geom/cube.obj"
+	subdivSteps 1
+	//autoSmooth true
+	faceted true
+}
+
+
+Node cube {
+	geometry cube
+	shader cube_phong
+	translate (20, 50, -20)
+	scale (80, 80, 40)
+}
+
+Mesh cube2 {
+	file "geom/cube.obj"
+	subdivSteps 4
+	faceted false
+}
+
+Node cube2 {
+	geometry cube2
+	shader cube_phong
+	translate (100, 50, -20)
+	scale (80, 80, 80)
+}
+//Mesh pyramid  {
+//	file "geom/3pyramid.obj"
+//	subdivSteps 2
+//	faceted false
+//}
+
+//Node pyramid {
+//	geometry pyramid
+//	shader cube_phong
+//	translate (-130, 85, 0)
+//	scale (40, 40, 40)
+//}
+
+
+// 8. And, finally, an environment
+CubemapEnvironment {
+	folder "env/forest"
+}
+
+

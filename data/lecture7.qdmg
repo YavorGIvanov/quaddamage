@@ -129,18 +129,6 @@ Lambert soccer_ball_shader {
 	texture checker
 }
 
-Mesh heart {
-	file         "geom/heart.obj"
-	faceted true
-}
-
-BitmapTexture lava_tex {
-	file "texture/lava.bmp"
-}
-
-Lambert lava_shader {
-	texture lava_tex
-}
 
 //Node heart {
 //	geometry heart

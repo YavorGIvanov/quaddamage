@@ -30,13 +30,323 @@
 #include "mesh.h"
 #include "constants.h"
 #include "color.h"
-using std::max;
-using std::vector;
-using std::string;
 
+using std::max;
+using std::string;
+using std::vector;
+
+inline bool compareEqual(const Vector& lhs, const Vector& rhs) {
+	double eps = 0.00000001;
+	return fabs(lhs.x - rhs.x) < eps && fabs(lhs.y - rhs.y) < eps && fabs(lhs.z - rhs.z) < eps;
+}
+inline bool compareLess(const Vector& lhs, const Vector& rhs) {
+	if (lhs.x != rhs.x){
+		if (lhs.x < rhs.x){
+			return true;
+		}
+		return false;
+	}
+	if (lhs.y != rhs.y){
+		if (lhs.y < rhs.y){
+			return true;
+		}
+		return false;
+	}
+	if (lhs.z != rhs.z){
+		if (lhs.z < rhs.z){
+			return true;
+		}
+		return false;
+	}
+	return false;
+}
+
+inline int memberOf(const vector<Vector>& vertices, const Vector& x){
+	int verticesSIZE = vertices.size();
+	for (int i = 0; i < verticesSIZE; i++){
+		if (compareEqual(vertices[i], x)){
+			return i;
+		}
+	}
+	return -1;
+}
+/// Compute the barycentric coordinates of Points in T
+
+void printVertices(const Triangle &t) {
+	printf("(%d, %d, %d)\n", t.v[0], t.v[1], t.v[2]);
+}
+
+vector<Triangle> Mesh::getNeighbours(const Triangle &currTriangle) const {
+	vector<Triangle> neighbours;
+	size_t eqCount;
+	for (auto &t : triangles) {
+		eqCount = 0;
+		for (auto &vertexNum : t.v) {
+			if (vertexNum == currTriangle.v[0] || vertexNum == currTriangle.v[1] ||
+				vertexNum == currTriangle.v[2]) {
+				eqCount++;
+			}
+		}
+		if (eqCount == 1 || eqCount == 2) {
+			neighbours.push_back(t);
+		}
+	}
+	return neighbours;
+}
+
+Vector Mesh::getEdgePoint(const Vector &A, const Vector &B, const Vector &C,
+	const Vector &D) const{
+	double coeff1 = 3.0 / 8, coeff2 = 1.0 / 8;
+	Vector shit = coeff1*(A + B) + coeff2*(C + D);
+	///printf("shit: %f, %f, %f\n", shit.x, shit.y, shit.z);
+	return coeff1*(A + B) + coeff2*(C + D);
+}
+
+Vector Mesh::getVertexPoint(const Vector &vertex,
+                            vector<Vector> &adjascent) const {
+  /// First sort and remove the duplicate adjacent points
+	std::sort(adjascent.begin(), adjascent.end(), compareLess);
+	adjascent.erase(std::unique(adjascent.begin(), adjascent.end(), compareEqual),
+		adjascent.end());
+  Vector sumAdj(0, 0, 0);
+  size_t adjNum = adjascent.size();
+  double coef;
+  if (adjNum > 3) {
+    coef = 1.0 / adjNum *
+           (5.0 / 8 - pow((3.0 / 8 + 1.0 / 4 * cos(2.0 * PI / adjNum)), 2));
+  } 
+  else if (adjNum == 3){
+	coef = 3.0 / 16;
+  }
+  for (auto &p : adjascent) {
+    sumAdj += p;
+  }
+
+  return (1 - adjNum * coef) * vertex + coef * sumAdj;
+}
+
+void Mesh::computeEdgePoints(const Triangle &currentT,
+							 vector<Triangle>& commonSideNeighbours,
+                             Vector edgePoints[3]) const {
+	size_t commonSIZE = commonSideNeighbours.size();
+  for (size_t i = 0; i < commonSIZE; i++) {
+    bool found[3] = {false};
+	for (auto &vNum : commonSideNeighbours[i].v) {
+      if (vNum == currentT.v[0]) {
+        vNum = -1;
+        found[0] = true;
+      } 
+	  else if (vNum == currentT.v[1]) {
+        vNum = -1;
+        found[1] = true;
+      } 
+	  else if (vNum == currentT.v[2]) {
+        vNum = -1;
+        found[2] = true;
+      }
+    }
+    size_t vertexNum;
+	for (auto &vNum : commonSideNeighbours[i].v) {
+      if (vNum != -1) {
+        vertexNum = vNum;
+      }
+    }
+    if (found[0] && found[1]) {
+      edgePoints[0] =
+          getEdgePoint(vertices[currentT.v[0]], vertices[currentT.v[1]],
+                       vertices[currentT.v[2]], vertices[vertexNum]);
+    } 
+	else if (found[1] && found[2]) {
+      edgePoints[1] =
+          getEdgePoint(vertices[currentT.v[1]], vertices[currentT.v[2]],
+                       vertices[currentT.v[0]], vertices[vertexNum]);
+    } 
+	else if(found[2] && found[0]){
+      edgePoints[2] =
+          getEdgePoint(vertices[currentT.v[0]], vertices[currentT.v[2]],
+                       vertices[currentT.v[1]], vertices[vertexNum]);
+    }
+  }
+}
+
+void Mesh::computeVertexPoints(const vector<Triangle>& neighbours,
+                               const Triangle &currentT,
+                               vector<Triangle>& commonSideNeighbours,
+							   vector<vector<Vector>>& adjacents) const {
+  size_t eqCount, commonSideIndex = 0;
+  for (auto &neighbourT : neighbours) {
+    eqCount = 0;
+    /* Do the work of finding the adjacent points
+    * for all three vertices of the triangle
+    * At the same time take in an array of triangles
+    * the triangles which got common side with our */
+    for (auto &neighbourVNum : neighbourT.v) {
+      for (size_t j = 0; j < 3; j++) {
+        if (neighbourVNum == currentT.v[j]) {
+          for (auto &neighbourVertex : neighbourT.v) {
+            if (neighbourVertex != neighbourVNum) {
+				adjacents[j].push_back(vertices[neighbourVertex]);
+            }
+          }
+          eqCount++;
+        }
+      }
+    }
+    if (eqCount == 2) {
+      commonSideNeighbours.push_back(neighbourT);
+    }
+  }
+}
+
+void Mesh::addNewTriangles(std::vector<Vector>& newVertices,
+	std::vector<Triangle>& newTriangles,
+	const Triangle& currentT,
+	size_t vertexPointsIndices[3],
+	size_t edgePointsIndices[3]) const {
+    Triangle fourNewTriangles[4];
+	/// Add the triangle formed by the three edge points
+	for (size_t i = 0; i < 3; i++){
+		fourNewTriangles[0].v[i] = edgePointsIndices[i];
+	}
+	/// Add the remaining 3 triangles formed by 1 vertex Point and 2 Edge
+	/// Points
+	fourNewTriangles[1].v[0] = edgePointsIndices[0];
+	fourNewTriangles[1].v[1] = vertexPointsIndices[1];
+	fourNewTriangles[1].v[2] = edgePointsIndices[1];
+
+	fourNewTriangles[2].v[0] = edgePointsIndices[2];
+	fourNewTriangles[2].v[1] = edgePointsIndices[1];
+	fourNewTriangles[2].v[2] = vertexPointsIndices[2];
+
+	fourNewTriangles[3].v[0] = vertexPointsIndices[0];
+	fourNewTriangles[3].v[1] = edgePointsIndices[0];
+	fourNewTriangles[3].v[2] = edgePointsIndices[2];
+	
+	/*for (auto& newTr : fourNewTriangles){
+		for (size_t i = 0; i < 3; i++){
+			printf("%f, %f, %f\n", newVertices[newTr.v[i]].x, newVertices[newTr.v[i]].y, newVertices[newTr.v[i]].z);
+		}
+		printf("\n");
+	}*/
+
+	for (auto &newT : fourNewTriangles) {
+		newT.AB = newVertices[newT.v[1]] - newVertices[newT.v[0]];
+		newT.AC = newVertices[newT.v[2]] - newVertices[newT.v[0]];
+		newT.ABcrossAC = newT.AB ^ newT.AC;
+		newT.gnormal = newT.ABcrossAC;
+		newT.gnormal.normalize();
+		if (uvs.size() > 0){
+			newT.t[0] = currentT.t[0];
+			newT.t[1] = currentT.t[1];
+			newT.t[2] = currentT.t[2];
+		}
+		else{
+			newT.t[0] = 0;
+			newT.t[1] = 0;
+			newT.t[2] = 0;
+		}
+		/*if (uvs.size() != 0 && normals.size() != 0) {
+			for (size_t j = 0; j < 3; j++){
+				barCoords = getBarCoords(newVertices[newT.v[j]], currentT);
+				newUV = barCoords.x * uvs[currentT.t[0]] + barCoords.y * uvs[currentT.t[1]] + barCoords.z * uvs[currentT.t[2]];
+				foundUVIndex = memberOf(newUVs, newUV);
+
+				if (foundUVIndex == -1){
+					newUVs.push_back(newUV);
+					newT.t[j] = newUVsSIZE;
+					newUVsSIZE++;
+				}
+				else{
+					newT.t[j] = foundUVIndex;
+				}
+
+				newNormal = barCoords.x * normals[currentT.n[0]] + barCoords.y * normals[currentT.n[1]] + barCoords.z * normals[currentT.n[2]];
+				newNormal.normalize();
+				foundNormalIndex = memberOf(newNormals, newNormal);
+				if (foundNormalIndex == -1){
+					newNormals.push_back(newNormal);
+					newT.n[j] = newNormalsSIZE;
+					newNormalsSIZE++;
+				}
+				else{
+					newT.n[j] = foundNormalIndex;
+				}
+			}
+		}*/
+		newTriangles.push_back(newT);
+	}
+}
+void Mesh::subdivide() {
+
+  for (size_t step = 0; step < subdivSteps; step++) {
+    vector<Triangle> newTriangles;
+    vector<Vector> newVertices;
+    printf("STEP %d: \n", step + 1);
+    /// Iterate every triangle and generate 4 new for each of them
+    for (auto &currentT : triangles) {
+
+      /// All the neighbours of the current triangle
+      vector<Triangle> neighbours = getNeighbours(currentT);
+      /// All the direct adjacent vertices of each point from the triangle
+      vector<vector<Vector>> adjacents(3);
+      /// All of the neighbours with a common side with the current triangle
+      vector<Triangle> commonSideNeighbours;
+      /// Collect all the edgepoints in this array
+      Vector edgePoints[3];
+      /// Compute the Vector Points and the Neighbours with a common side with the current triangle
+      computeVertexPoints(neighbours, currentT, commonSideNeighbours,
+                          adjacents);
+      /// Compute the Edge Points
+      computeEdgePoints(currentT, commonSideNeighbours, edgePoints);
+      /// Add the new Points
+	  size_t newVSIZE = newVertices.size();;
+      size_t vertexPointsIndices[3];
+	  size_t edgePointsIndices[3];
+      Vector vertexPoint, edgePoint;
+	  int foundIndex;
+	  /// Add the new vertexPoints
+      for (size_t j = 0; j < 3; j++) {
+        vertexPoint = getVertexPoint(vertices[currentT.v[j]], adjacents[j]);
+		foundIndex = memberOf(newVertices, vertexPoint);
+        if (foundIndex == -1) {
+			newVertices.push_back(vertexPoint);
+			vertexPointsIndices[j] = newVSIZE;
+			newVSIZE++;
+        } 
+		else {
+			vertexPointsIndices[j] = foundIndex;
+        }
+      }
+	  /// Add the new edge Points
+      for (size_t j = 0; j < 3; j++) {
+		  foundIndex = memberOf(newVertices, edgePoints[j]);
+		  if (foundIndex == -1) {
+			  newVertices.push_back(edgePoints[j]);
+			  edgePointsIndices[j] = newVSIZE;
+			  newVSIZE++;;
+		  }
+		  else {
+			  edgePointsIndices[j] = foundIndex;
+		  }
+      }
+      addNewTriangles(newVertices, newTriangles, currentT,
+                      vertexPointsIndices, edgePointsIndices);
+    }
+    // Change the current mesh's Ts, Vs, uvs and normals with the new one
+    triangles = newTriangles;
+    vertices = newVertices;
+  }
+  if (!faceted){
+	  autoSmooth = true;
+	  normals.clear();
+  }
+}
 
 void Mesh::beginRender()
 {
+	if (subdivSteps > 0){
+		subdivide();
+	}
 	computeBoundingGeometry();
 	kdroot = NULL;
 	printf("Mesh loaded, %d triangles\n", int(triangles.size()));
@@ -166,18 +476,18 @@ bool Mesh::intersectTriangle(const RRay& ray, const Triangle& t, IntersectionInf
 {
 	if (backfaceCulling && dot(ray.dir, t.gnormal) > 0) return false;
 	Vector A = vertices[t.v[0]];
-	
 	Vector H = ray.start - A;
 	Vector D = ray.dir;
-	
+
 	double Dcr = - (t.ABcrossAC * D);
 
 	if (fabs(Dcr) < 1e-12) return false;
+	
 
 	double rDcr = 1 / Dcr;
 	double gamma = (t.ABcrossAC * H) * rDcr;
 	if (gamma < 0 || gamma > info.distance) return false;
-	
+
 	Vector HcrossD = H^D;
 	double lambda2 = (HcrossD * t.AC) * rDcr;
 	if (lambda2 < 0 || lambda2 > 1) return false;
@@ -186,7 +496,7 @@ bool Mesh::intersectTriangle(const RRay& ray, const Triangle& t, IntersectionInf
 	if (lambda3 < 0 || lambda3 > 1) return false;
 	
 	if (lambda2 + lambda3 > 1) return false;
-		
+	
 	info.distance = gamma;
 	info.ip = ray.start + ray.dir * gamma;
 	if (!faceted) {
@@ -211,7 +521,6 @@ bool Mesh::intersectTriangle(const RRay& ray, const Triangle& t, IntersectionInf
 	info.u = uv.x;
 	info.v = uv.y;
 	info.geom = this;
-	
 	return true;
 }
 
