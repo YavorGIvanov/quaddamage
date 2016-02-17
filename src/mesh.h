@@ -75,30 +75,8 @@ class Mesh: public Geometry {
 	bool intersectTriangle(const Ray& ray, const Triangle& t, IntersectionInfo& info);
 	void buildKD(KDTreeNode* node, BBox bbox, const std::vector<int>& triangleList, int depth);
 	bool intersectKD(KDTreeNode* node, BBox bbox, const Ray& ray, IntersectionInfo& info);
-	inline double calcCost(BBox& bbox, const double& splitPoint, const Axis& axis, 
-		const std::vector<int>& triangleList, const double& wholeArea){
-		BBox bboxLeft, bboxRight;
-		std::vector<int> trianglesLeft, trianglesRight;
-
-		bbox.split(axis, splitPoint, bboxLeft, bboxRight);
-		for (auto triangleIdx : triangleList) {
-			Triangle& T = this->triangles[triangleIdx];
-			const Vector& A = this->vertices[T.v[0]];
-			const Vector& B = this->vertices[T.v[1]];
-			const Vector& C = this->vertices[T.v[2]];
-
-			if (bboxLeft.intersectTriangle(A, B, C))
-				trianglesLeft.push_back(triangleIdx);
-
-			if (bboxRight.intersectTriangle(A, B, C))
-				trianglesRight.push_back(triangleIdx);
-		}
-		double costSplit = 0.3;
-		double leftArea, rightArea;
-		leftArea = bboxLeft.calcArea();
-		rightArea = bboxRight.calcArea();
-		return costSplit + (leftArea * trianglesLeft.size() + rightArea * trianglesRight.size())/wholeArea;
-	}
+	double calcCost(BBox& bbox, const double& splitPoint, const Axis& axis,
+		            const std::vector<int>& triangleList, const double& wholeArea);
 public:
 	
 	bool faceted;

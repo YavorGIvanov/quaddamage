@@ -52,6 +52,39 @@ void Mesh::beginRender()
 		printf(" -> KDTree built in %.2lfs, avg depth = %.1lf\n", (endBuild - startBuild) / 1000.0, maxDepthSum / double(numNodes));
 	}
 }
+
+/* calcCost evaluates the following funtion for argument -> splitPoint:
+ * f_split := costSplit + f(left) + f(right)
+ *         := costSplit + costIntersect * numTrianglesLeft * surfaceAreaLeft + 
+ *		                  costIntersect * numTrianglesRight * surfaceAreaRight */
+double Mesh::calcCost(BBox &bbox, const double &splitPoint, const Axis &axis,
+                      const std::vector<int> &triangleList,
+                      const double &wholeArea) {
+  BBox bboxLeft, bboxRight;
+  std::vector<int> trianglesLeft, trianglesRight;
+
+  bbox.split(axis, splitPoint, bboxLeft, bboxRight);
+  for (auto triangleIdx : triangleList) {
+    Triangle &T = this->triangles[triangleIdx];
+    const Vector &A = this->vertices[T.v[0]];
+    const Vector &B = this->vertices[T.v[1]];
+    const Vector &C = this->vertices[T.v[2]];
+
+    if (bboxLeft.intersectTriangle(A, B, C))
+      trianglesLeft.push_back(triangleIdx);
+
+    if (bboxRight.intersectTriangle(A, B, C))
+      trianglesRight.push_back(triangleIdx);
+  }
+  double costSplit = 0.3;
+  double leftArea, rightArea;
+  leftArea = bboxLeft.calcArea();
+  rightArea = bboxRight.calcArea();
+  return costSplit +
+         (leftArea * trianglesLeft.size() + rightArea * trianglesRight.size()) /
+             wholeArea;
+}
+
 void Mesh::buildKD(KDTreeNode* node, BBox bbox, const vector<int>& triangleList, int depth)
 {
 	if (depth > MAX_TREE_DEPTH || int(triangleList.size()) < TRIANGLES_PER_LEAF) {
@@ -65,12 +98,13 @@ void Mesh::buildKD(KDTreeNode* node, BBox bbox, const vector<int>& triangleList,
 	double rightLimit = bbox.vmax[axis];
 	double optimalSplitPos;
 	if (useSAH){
-	// Ternary search:
+	/* Use Ternary search for finding the minimum of the function calcCost
+	 * Split the bounding box at the minimum */
 		double left = leftLimit, right = rightLimit, leftcost, rightcost, leftThird, rightThird;
 		double wholeArea = bbox.calcArea();
-		
-		double eps = (rightLimit-leftLimit)*1e-4;//1e-4 <- build tree faster and get a small difference(max ~1s) in intersection
-		while (abs(right-left) >= eps){
+		//eps can be adjusted
+		double eps = (rightLimit-leftLimit)*1e-4;
+		while (fabs(right-left) >= eps){
 			leftThird = left + (right - left) / 3.0;
 			rightThird = right - (right - left) / 3.0;
 			leftcost = calcCost(bbox, leftThird, axis, triangleList, wholeArea);
@@ -83,17 +117,6 @@ void Mesh::buildKD(KDTreeNode* node, BBox bbox, const vector<int>& triangleList,
 			}
 		}
 		optimalSplitPos = (left + right) * 0.5;
-		
-		
-		//printf("%f in [%f, %f] \n", optimalSplitPos, leftLimit, rightLimit);
-		//double wholeCost = wholeArea * triangleList.size();
-		/*// TERMINATION CONDITION !!! Not working good for this scene
-		if (calcCost(bbox, optimalSplitPos, axis, triangleList, wholeArea) > wholeCost){
-			maxDepthSum += depth;
-			numNodes++;
-			node->initLeaf(triangleList);
-			return;
-		}*/
 	}
 	else {
 		optimalSplitPos = (leftLimit + rightLimit) * 0.5; // TODO: could be MUCH better! 
