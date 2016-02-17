@@ -1,3 +1,7 @@
+# Yavor Ivanov's solutions
+
+Repository with my solutions to the homeworks given throughout the semester and the final project for the course. Each solution is placed in a different branch.
+
 # quaddamage
 
 Another C++ raytracer for the v4 FMI raytracing course.
