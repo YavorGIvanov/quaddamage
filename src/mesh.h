@@ -59,7 +59,9 @@ struct KDTreeNode {
 			delete [] children;
 	}
 };
-
+/* A simple struct Triple representing a vertex, normal and an uv coordinate
+ * in one. It is useful to work with them while calculating every new vertex, 
+ * normal and uv coordinate with a similiar scheme */
 struct Triple {
 	Triple(){}
 	Triple(Vector v, Vector n, Vector uv) : vertex(v), normal(n), uv(uv){}
@@ -95,22 +97,22 @@ class Mesh: public Geometry {
 	bool intersectKD(KDTreeNode* node, const BBox& bbox, const RRay& ray, IntersectionInfo& info);
 	void subdivide();
 	///Subdivision helper methods:
-	friend Triple getEdgeTriple(const Triple& A, const Triple& B, const Triple& C,
-							    const Triple& D);
-	friend Triple getVertexTriple(const Triple& vertex, vector<Triple>& adjacent);
-	vector<vector<Triangle>> getNeighbours(const Triangle &currTriangle) const;
-	vector<Triple> computeEdgePoints(const Triangle& currentT,
-									 const vector<Triangle>& closeNeighbours) const;
+    friend Triple getEdgeTriple(const Triple &A, const Triple &B,
+                                const Triple &C, const Triple &D);
+    friend Triple getVertexTriple(const Triple &vertex,
+                                  vector<Triple> &adjacent);
+    vector<vector<Triangle>> getNeighbours(const Triangle &currTriangle) const;
+    vector<Triple> computeEdgePoints(const Triangle &currentT,
+                                     const vector<Triangle> &closeNeighbours) const;
 	vector<Triple> computeVertexTriples(const Triangle &currentT,
-									    const vector<vector<Triangle>> &neighbours) const;
-	void addNewTriangles(vector<Triangle> &newTriangles,
-		const vector<Vector> newVertices,
-		vector<TripleIndices> vertexIndices,
-		vector<TripleIndices> edgeIndices) const;
-	///Vector getBarCoords(const Vector& P, const Triangle& T) const;
-        ///
-public:
-	
+                                        const vector<vector<Triangle>> &neighbours) const;
+    void addNewTriangles(vector<Triangle> &newTriangles,
+                         const vector<Vector> newVertices,
+                         vector<TripleIndices> vertexIndices,
+                         vector<TripleIndices> edgeIndices) const;
+
+    public:
+
 	bool faceted;
 	bool backfaceCulling;
 	int subdivSteps;
