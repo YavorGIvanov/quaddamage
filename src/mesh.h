@@ -29,18 +29,20 @@
 #include "vector.h"
 #include "bbox.h"
 
+using std::vector;
+
 struct KDTreeNode {
 	Axis axis; // AXIS_NONE if this is a leaf node
 	double splitPos;
 	union {
-		std::vector<int>* triangles;
+		vector<int>* triangles;
 		KDTreeNode* children;
 	};
 	//
 	void initLeaf(const std::vector<int>& triangles)
 	{
 		axis = AXIS_NONE;
-		this->triangles = new std::vector<int>(triangles);
+		this->triangles = new vector<int>(triangles);
 	}
 	
 	void initTreeNode(Axis axis, double splitPos)
@@ -58,11 +60,27 @@ struct KDTreeNode {
 	}
 };
 
+struct Triple {
+	Triple(){}
+	Triple(Vector v, Vector n, Vector uv) : vertex(v), normal(n), uv(uv){}
+	Vector vertex, normal, uv;
+	Triple &operator+=(const Triple& other);
+	Triple &operator*=(float scalar);
+};
+bool operator<(const Triple& left, const Triple& right);
+bool operator==(const Triple& left, const Triple& right);
+Triple operator+(Triple left, const Triple& right);
+Triple operator*(double scalar, Triple current);
+
+struct TripleIndices {
+	size_t v, n, uv;
+};
+
 class Mesh: public Geometry {
-	std::vector<Vector> vertices;
-	std::vector<Vector> normals;
-	std::vector<Vector> uvs;
-	std::vector<Triangle> triangles;
+	vector<Vector> vertices;
+	vector<Vector> normals;
+	vector<Vector> uvs;
+	vector<Triangle> triangles;
 	BBox bbox;
 	
 	KDTreeNode* kdroot;
@@ -73,26 +91,22 @@ class Mesh: public Geometry {
 
 	void computeBoundingGeometry();
 	bool intersectTriangle(const RRay& ray, const Triangle& t, IntersectionInfo& info);
-	void buildKD(KDTreeNode* node, BBox bbox, const std::vector<int>& triangleList, int depth);
+	void buildKD(KDTreeNode* node, BBox bbox, const vector<int>& triangleList, int depth);
 	bool intersectKD(KDTreeNode* node, const BBox& bbox, const RRay& ray, IntersectionInfo& info);
 	void subdivide();
 	///Subdivision helper methods:
-	std::vector<Triangle> getNeighbours(const Triangle& center) const;
-	Vector getEdgePoint(const Vector& A, const Vector& B, const Vector& C,
-		const Vector& D) const;
-    Vector getVertexPoint(const Vector& vertex, std::vector<Vector>& adjacent) const;
-    void computeEdgePoints(const Triangle& currentT,
-						   std::vector<Triangle>& commonSideNeighbours,
-                           Vector edgePoints[3]) const;
-    void computeVertexPoints(const std::vector<Triangle> &neighbours,
-                             const Triangle& currentT,
-							 std::vector<Triangle>& commonSideNeighbours,
-                             std::vector<std::vector<Vector>> &adjacents) const;
-    void addNewTriangles(std::vector<Vector>& newVertices,
-                         std::vector<Triangle>& newTriangles,
-						 const Triangle& currentT,
-                         size_t vertexPointsIndices[3],
-						 size_t edgePointsIndices[3]) const;
+	friend Triple getEdgeTriple(const Triple& A, const Triple& B, const Triple& C,
+							    const Triple& D);
+	friend Triple getVertexTriple(const Triple& vertex, vector<Triple>& adjacent);
+	vector<vector<Triangle>> getNeighbours(const Triangle &currTriangle) const;
+	vector<Triple> computeEdgePoints(const Triangle& currentT,
+									 const vector<Triangle>& closeNeighbours) const;
+	vector<Triple> computeVertexTriples(const Triangle &currentT,
+									    const vector<vector<Triangle>> &neighbours) const;
+	void addNewTriangles(vector<Triangle> &newTriangles,
+		const vector<Vector> newVertices,
+		vector<TripleIndices> vertexIndices,
+		vector<TripleIndices> edgeIndices) const;
 	///Vector getBarCoords(const Vector& P, const Triangle& T) const;
         ///
 public:

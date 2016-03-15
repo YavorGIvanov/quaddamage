@@ -25,6 +25,8 @@ bool needsAA[VFB_MAX_SIZE][VFB_MAX_SIZE];
 bool visibilityCheck(const Vector& start, const Vector& end);
 ThreadPool pool;
 
+extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
+
 Color raytrace(const Ray& ray)
 {
 	if (ray.depth > scene.settings.maxTraceDepth) return Color(0, 0, 0);

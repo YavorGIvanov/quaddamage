@@ -33,32 +33,54 @@
 
 using std::max;
 using std::string;
-using std::vector;
+
+Triple &Triple::operator+=(const Triple &other) {
+	vertex += other.vertex;
+	normal += other.normal;
+	uv += other.uv;
+	return *this;
+}
+
+Triple &Triple::operator*=(float scalar) {
+	vertex *= scalar;
+	normal *= scalar;
+	uv *= scalar;
+	return *this;
+}
+
+Triple operator+(Triple left, const Triple &right) {
+	left += right;
+	return left;
+}
+
+Triple operator*(double scalar, Triple current) {
+	current *= scalar;
+	return current;
+}
 
 inline bool compareEqual(const Vector& lhs, const Vector& rhs) {
 	double eps = 0.00000001;
 	return fabs(lhs.x - rhs.x) < eps && fabs(lhs.y - rhs.y) < eps && fabs(lhs.z - rhs.z) < eps;
 }
 inline bool compareLess(const Vector& lhs, const Vector& rhs) {
-	if (lhs.x != rhs.x){
-		if (lhs.x < rhs.x){
-			return true;
-		}
-		return false;
+	if (lhs.x != rhs.x) {
+		return lhs.x < rhs.x;
 	}
-	if (lhs.y != rhs.y){
-		if (lhs.y < rhs.y){
-			return true;
-		}
-		return false;
+	if (lhs.y != rhs.y) {
+		return lhs.y < rhs.y;
 	}
-	if (lhs.z != rhs.z){
-		if (lhs.z < rhs.z){
-			return true;
-		}
-		return false;
+	if (lhs.z != rhs.z) {
+		return lhs.z < rhs.z;
 	}
 	return false;
+}
+
+bool operator<(const Triple& left, const Triple& right) {
+	return compareLess(left.vertex, right.vertex);
+}
+
+bool operator==(const Triple& left, const Triple& right){
+	return compareEqual(left.vertex, right.vertex);
 }
 
 inline int memberOf(const vector<Vector>& vertices, const Vector& x){
@@ -70,15 +92,77 @@ inline int memberOf(const vector<Vector>& vertices, const Vector& x){
 	}
 	return -1;
 }
-/// Compute the barycentric coordinates of Points in T
 
+inline vector<TripleIndices> addTo(const vector<Triple> &source,
+                                   vector<Vector> &targetV,
+                                   vector<Vector> &targetN,
+                                   vector<Vector> &targetUV) {
+  TripleIndices targetSIZE; 
+  targetSIZE.v = targetV.size();
+  targetSIZE.n = targetN.size();
+  targetSIZE.uv = targetUV.size();
+  size_t sourceSIZE = source.size();
+  TripleIndices foundIndex;
+  vector<TripleIndices> indices;
+  for (size_t j = 0; j < sourceSIZE; j++) {
+    foundIndex.v = memberOf(targetV, source[j].vertex);
+	foundIndex.n = memberOf(targetN, source[j].normal);
+	foundIndex.uv = memberOf(targetUV, source[j].uv);
+    if (foundIndex.v == -1) {
+      targetV.push_back(source[j].vertex);
+	  foundIndex.v = targetSIZE.v;
+      targetSIZE.v++;
+    }
+	if (foundIndex.n == -1) {
+		targetN.push_back(source[j].normal);
+		foundIndex.n = targetSIZE.n;
+		targetSIZE.n++;
+	}
+	if (foundIndex.uv == -1) {
+		targetUV.push_back(source[j].uv);
+		foundIndex.uv = targetSIZE.uv;
+		targetSIZE.uv++;
+	}
+	indices.push_back(foundIndex);
+  }
+  return indices;
+}
 void printVertices(const Triangle &t) {
 	printf("(%d, %d, %d)\n", t.v[0], t.v[1], t.v[2]);
 }
 
-vector<Triangle> Mesh::getNeighbours(const Triangle &currTriangle) const {
-	vector<Triangle> neighbours;
-	size_t eqCount;
+inline Triple getEdgeTriple(const Triple &A, const Triple &B, const Triple &C,
+	const Triple &D){
+	double coef1 = 3.0 / 8, coef2 = 1.0 / 8;
+	return coef1*(A + B) + coef2*(C + D);
+}
+
+inline Triple getVertexTriple(const Triple &vertex,
+                            vector<Triple> &adjacent) {
+  /// First sort and remove the duplicate adjacent points
+	std::sort(adjacent.begin(), adjacent.end());
+	adjacent.erase(std::unique(adjacent.begin(), adjacent.end()), adjacent.end());
+  Vector x(0,0,0);
+  Triple sumAdj(x,x,x);
+  size_t adjNum = adjacent.size();
+  double coef;
+  if (adjNum > 3) {
+    coef = 1.0 / adjNum *
+           (5.0 / 8 - pow((3.0 / 8 + 1.0 / 4 * cos(2.0 * PI / adjNum)), 2));
+  } 
+  else if (adjNum == 3){
+	coef = 3.0 / 16;
+  }
+  for (auto &p : adjacent) {
+    sumAdj += p;
+  }
+
+  return (1 - adjNum * coef) * vertex + coef * sumAdj;
+}
+
+vector<vector<Triangle>> Mesh::getNeighbours(const Triangle &currTriangle) const {
+	vector<vector<Triangle>> neighbours(2);
+	size_t trianglesSIZE = triangles.size(), eqCount;
 	for (auto &t : triangles) {
 		eqCount = 0;
 		for (auto &vertexNum : t.v) {
@@ -88,257 +172,174 @@ vector<Triangle> Mesh::getNeighbours(const Triangle &currTriangle) const {
 			}
 		}
 		if (eqCount == 1 || eqCount == 2) {
-			neighbours.push_back(t);
+			neighbours[eqCount - 1].push_back(t);
 		}
 	}
 	return neighbours;
 }
 
-Vector Mesh::getEdgePoint(const Vector &A, const Vector &B, const Vector &C,
-	const Vector &D) const{
-	double coeff1 = 3.0 / 8, coeff2 = 1.0 / 8;
-	Vector shit = coeff1*(A + B) + coeff2*(C + D);
-	///printf("shit: %f, %f, %f\n", shit.x, shit.y, shit.z);
-	return coeff1*(A + B) + coeff2*(C + D);
-}
-
-Vector Mesh::getVertexPoint(const Vector &vertex,
-                            vector<Vector> &adjascent) const {
-  /// First sort and remove the duplicate adjacent points
-	std::sort(adjascent.begin(), adjascent.end(), compareLess);
-	adjascent.erase(std::unique(adjascent.begin(), adjascent.end(), compareEqual),
-		adjascent.end());
-  Vector sumAdj(0, 0, 0);
-  size_t adjNum = adjascent.size();
-  double coef;
-  if (adjNum > 3) {
-    coef = 1.0 / adjNum *
-           (5.0 / 8 - pow((3.0 / 8 + 1.0 / 4 * cos(2.0 * PI / adjNum)), 2));
-  } 
-  else if (adjNum == 3){
-	coef = 3.0 / 16;
-  }
-  for (auto &p : adjascent) {
-    sumAdj += p;
-  }
-
-  return (1 - adjNum * coef) * vertex + coef * sumAdj;
-}
-
-void Mesh::computeEdgePoints(const Triangle &currentT,
-							 vector<Triangle>& commonSideNeighbours,
-                             Vector edgePoints[3]) const {
-	size_t commonSIZE = commonSideNeighbours.size();
-  for (size_t i = 0; i < commonSIZE; i++) {
-    bool found[3] = {false};
-	for (auto &vNum : commonSideNeighbours[i].v) {
-      if (vNum == currentT.v[0]) {
-        vNum = -1;
-        found[0] = true;
-      } 
-	  else if (vNum == currentT.v[1]) {
-        vNum = -1;
-        found[1] = true;
-      } 
-	  else if (vNum == currentT.v[2]) {
-        vNum = -1;
-        found[2] = true;
-      }
-    }
-    size_t vertexNum;
-	for (auto &vNum : commonSideNeighbours[i].v) {
-      if (vNum != -1) {
-        vertexNum = vNum;
-      }
-    }
-    if (found[0] && found[1]) {
-      edgePoints[0] =
-          getEdgePoint(vertices[currentT.v[0]], vertices[currentT.v[1]],
-                       vertices[currentT.v[2]], vertices[vertexNum]);
-    } 
-	else if (found[1] && found[2]) {
-      edgePoints[1] =
-          getEdgePoint(vertices[currentT.v[1]], vertices[currentT.v[2]],
-                       vertices[currentT.v[0]], vertices[vertexNum]);
-    } 
-	else if(found[2] && found[0]){
-      edgePoints[2] =
-          getEdgePoint(vertices[currentT.v[0]], vertices[currentT.v[2]],
-                       vertices[currentT.v[1]], vertices[vertexNum]);
-    }
-  }
-}
-
-void Mesh::computeVertexPoints(const vector<Triangle>& neighbours,
-                               const Triangle &currentT,
-                               vector<Triangle>& commonSideNeighbours,
-							   vector<vector<Vector>>& adjacents) const {
-  size_t eqCount, commonSideIndex = 0;
-  for (auto &neighbourT : neighbours) {
-    eqCount = 0;
-    /* Do the work of finding the adjacent points
-    * for all three vertices of the triangle
-    * At the same time take in an array of triangles
-    * the triangles which got common side with our */
-    for (auto &neighbourVNum : neighbourT.v) {
-      for (size_t j = 0; j < 3; j++) {
-        if (neighbourVNum == currentT.v[j]) {
-          for (auto &neighbourVertex : neighbourT.v) {
-            if (neighbourVertex != neighbourVNum) {
-				adjacents[j].push_back(vertices[neighbourVertex]);
-            }
+vector<Triple> Mesh::computeEdgePoints(const Triangle &currentT,
+							                   const vector<Triangle>& closeNeighbours) const {
+	size_t closeSIZE = closeNeighbours.size();
+	Triple current;
+	vector<Triple> edgePoints(3);
+	for (auto &t : closeNeighbours) {
+		Vector currSIDE, currPoint, currNormal, currUv;
+          if (t.v[0] != currentT.v[0] && t.v[0] != currentT.v[1] &&
+              t.v[0] != currentT.v[2]) {
+			  current.vertex =  vertices[t.v[0]];
+			  current.normal = normals[t.n[0]];
+			  current.uv = uvs[t.t[0]];
+			  currSIDE = vertices[t.v[2]] - vertices[t.v[1]];
           }
-          eqCount++;
+		  else if(t.v[1] != currentT.v[0] && t.v[1] != currentT.v[1] &&
+			  t.v[1] != currentT.v[2]){
+			  current.vertex = vertices[t.v[0]];
+			  current.normal = normals[t.n[0]];
+			  current.uv = uvs[t.t[0]];
+			  currSIDE = t.AC;
+		  }
+		  else {
+			  current.vertex = vertices[t.v[0]];
+			  current.normal = normals[t.n[0]];
+			  current.uv = uvs[t.t[0]];
+			  currSIDE = t.AB;
+		  }
+		  Triple A(vertices[currentT.v[0]], normals[currentT.n[0]], uvs[currentT.t[0]]),
+			     B(vertices[currentT.v[1]], normals[currentT.n[1]], uvs[currentT.t[1]]),
+			     C(vertices[currentT.v[2]], normals[currentT.n[2]], uvs[currentT.t[2]]);
+		  if (compareEqual(currSIDE, currentT.AB)) {
+			  edgePoints[0] = getEdgeTriple(A, B, C, current);
+		  }
+		  else if(compareEqual(currSIDE, currentT.AC)){
+			  edgePoints[1] = getEdgeTriple(B, C, A, current);
+		  }
+		  else {
+			  edgePoints[2] = getEdgeTriple(A, C, B, current);
+		  }
         }
-      }
-    }
-    if (eqCount == 2) {
-      commonSideNeighbours.push_back(neighbourT);
-    }
-  }
+	return edgePoints;
 }
 
-void Mesh::addNewTriangles(std::vector<Vector>& newVertices,
-	std::vector<Triangle>& newTriangles,
-	const Triangle& currentT,
-	size_t vertexPointsIndices[3],
-	size_t edgePointsIndices[3]) const {
-    Triangle fourNewTriangles[4];
-	/// Add the triangle formed by the three edge points
-	for (size_t i = 0; i < 3; i++){
-		fourNewTriangles[0].v[i] = edgePointsIndices[i];
-	}
-	/// Add the remaining 3 triangles formed by 1 vertex Point and 2 Edge
-	/// Points
-	fourNewTriangles[1].v[0] = edgePointsIndices[0];
-	fourNewTriangles[1].v[1] = vertexPointsIndices[1];
-	fourNewTriangles[1].v[2] = edgePointsIndices[1];
-
-	fourNewTriangles[2].v[0] = edgePointsIndices[2];
-	fourNewTriangles[2].v[1] = edgePointsIndices[1];
-	fourNewTriangles[2].v[2] = vertexPointsIndices[2];
-
-	fourNewTriangles[3].v[0] = vertexPointsIndices[0];
-	fourNewTriangles[3].v[1] = edgePointsIndices[0];
-	fourNewTriangles[3].v[2] = edgePointsIndices[2];
-	
-	/*for (auto& newTr : fourNewTriangles){
-		for (size_t i = 0; i < 3; i++){
-			printf("%f, %f, %f\n", newVertices[newTr.v[i]].x, newVertices[newTr.v[i]].y, newVertices[newTr.v[i]].z);
-		}
-		printf("\n");
-	}*/
-
-	for (auto &newT : fourNewTriangles) {
-		newT.AB = newVertices[newT.v[1]] - newVertices[newT.v[0]];
-		newT.AC = newVertices[newT.v[2]] - newVertices[newT.v[0]];
-		newT.ABcrossAC = newT.AB ^ newT.AC;
-		newT.gnormal = newT.ABcrossAC;
-		newT.gnormal.normalize();
-		if (uvs.size() > 0){
-			newT.t[0] = currentT.t[0];
-			newT.t[1] = currentT.t[1];
-			newT.t[2] = currentT.t[2];
-		}
-		else{
-			newT.t[0] = 0;
-			newT.t[1] = 0;
-			newT.t[2] = 0;
-		}
-		/*if (uvs.size() != 0 && normals.size() != 0) {
+vector<Triple> Mesh::computeVertexTriples(const Triangle &currentT,
+										  const vector<vector<Triangle>> &neighbours) const {
+	vector<vector<Triple>> adjacents(3);
+	Triple current;
+	for (size_t i = 0; i < 2; i++) {
+		for (auto &t : neighbours[i]) {
 			for (size_t j = 0; j < 3; j++){
-				barCoords = getBarCoords(newVertices[newT.v[j]], currentT);
-				newUV = barCoords.x * uvs[currentT.t[0]] + barCoords.y * uvs[currentT.t[1]] + barCoords.z * uvs[currentT.t[2]];
-				foundUVIndex = memberOf(newUVs, newUV);
-
-				if (foundUVIndex == -1){
-					newUVs.push_back(newUV);
-					newT.t[j] = newUVsSIZE;
-					newUVsSIZE++;
-				}
-				else{
-					newT.t[j] = foundUVIndex;
-				}
-
-				newNormal = barCoords.x * normals[currentT.n[0]] + barCoords.y * normals[currentT.n[1]] + barCoords.z * normals[currentT.n[2]];
-				newNormal.normalize();
-				foundNormalIndex = memberOf(newNormals, newNormal);
-				if (foundNormalIndex == -1){
-					newNormals.push_back(newNormal);
-					newT.n[j] = newNormalsSIZE;
-					newNormalsSIZE++;
-				}
-				else{
-					newT.n[j] = foundNormalIndex;
+				size_t vIndex = t.v[j];
+				for (size_t k = 0; k < 3; k++) {
+					if (vIndex != currentT.v[k]) {
+						current.vertex = vertices[vIndex];
+						current.normal = normals[t.n[j]];
+						current.uv = uvs[t.t[j]];
+						adjacents[j].push_back(current);
+					}
 				}
 			}
-		}*/
-		newTriangles.push_back(newT);
+		}
 	}
+	vector<Triple> vertexTriples(3);
+	Triple currTVertex;
+
+	for (size_t j = 0; j < 3; j++) {
+		currTVertex.vertex = vertices[currentT.v[j]];
+		currTVertex.normal = normals[currentT.n[j]];
+		currTVertex.uv = uvs[currentT.t[j]];
+		current = getVertexTriple(currTVertex, adjacents[j]);
+		vertexTriples.push_back(current);
+	}
+	return vertexTriples;
+}
+
+void Mesh::addNewTriangles(vector<Triangle> &newTriangles,
+						   const vector<Vector> newVertices,
+						   vector<TripleIndices> vertexIndices,
+                           vector<TripleIndices> edgeIndices) const {
+  Triangle newT;
+  /// Add the triangle formed by the three edge points
+  for (size_t i = 0; i < 3; i++) {
+    newT.v[i] = edgeIndices[i].v;
+	newT.n[i] = edgeIndices[i].n;
+	newT.t[i] = edgeIndices[i].uv;
+  }
+  newTriangles.push_back(newT);
+  /// Add the remaining 3 triangles formed by 1 vertex Point and 2 Edge
+  /// Points
+  newT.v[0] = edgeIndices[0].v;
+  newT.n[0] = edgeIndices[0].n;
+  newT.t[0] = edgeIndices[0].uv;
+  newT.v[1] = vertexIndices[1].v;
+  newT.n[1] = vertexIndices[1].n;
+  newT.t[1] = vertexIndices[1].uv;
+  newT.v[2] = edgeIndices[2].v;
+  newT.n[2] = edgeIndices[2].n;
+  newT.t[2] = edgeIndices[2].uv;
+
+  newTriangles.push_back(newT);
+
+  newT.v[0] = edgeIndices[2].v;
+  newT.v[1] = edgeIndices[1].v;
+  newT.v[2] = vertexIndices[2].v;
+  newT.n[0] = edgeIndices[2].n;
+  newT.n[1] = edgeIndices[1].n;
+  newT.n[2] = vertexIndices[2].n;
+  newT.t[0] = edgeIndices[2].uv;
+  newT.t[1] = edgeIndices[1].uv;
+  newT.t[2] = vertexIndices[2].uv;
+
+  newTriangles.push_back(newT);
+
+  newT.v[0] = vertexIndices[0].v;
+  newT.v[1] = edgeIndices[0].v;
+  newT.v[2] = edgeIndices[2].v;
+  newT.n[0] = vertexIndices[0].n;
+  newT.n[1] = edgeIndices[0].n;
+  newT.n[2] = edgeIndices[2].n;
+  newT.t[0] = vertexIndices[0].uv;
+  newT.t[1] = edgeIndices[0].uv;
+  newT.t[2] = edgeIndices[2].uv;
+
+  newTriangles.push_back(newT);
+  size_t tSIZE = newTriangles.size();
+  for (size_t i = 1; i <= 4; i++) {
+	  newTriangles[tSIZE - i].AB = newVertices[newTriangles[tSIZE - i].v[1]] - newVertices[newTriangles[tSIZE - i].v[0]];
+	  newTriangles[tSIZE - i].AC = newVertices[newTriangles[tSIZE - i].v[2]] - newVertices[newTriangles[tSIZE - i].v[0]];
+	  newTriangles[tSIZE - i].ABcrossAC = newTriangles[tSIZE - i].AB ^ newTriangles[tSIZE - i].AC;
+	  newTriangles[tSIZE - i].gnormal = newTriangles[tSIZE - i].ABcrossAC;
+	  newTriangles[tSIZE - i].gnormal.normalize();
+  }
 }
 void Mesh::subdivide() {
 
   for (size_t step = 0; step < subdivSteps; step++) {
     vector<Triangle> newTriangles;
     vector<Vector> newVertices;
+	vector<Vector> newNormals;
+	vector<Vector> newUvs;
     printf("STEP %d: \n", step + 1);
     /// Iterate every triangle and generate 4 new for each of them
     for (auto &currentT : triangles) {
 
       /// All the neighbours of the current triangle
-      vector<Triangle> neighbours = getNeighbours(currentT);
-      /// All the direct adjacent vertices of each point from the triangle
-      vector<vector<Vector>> adjacents(3);
-      /// All of the neighbours with a common side with the current triangle
-      vector<Triangle> commonSideNeighbours;
-      /// Collect all the edgepoints in this array
-      Vector edgePoints[3];
-      /// Compute the Vector Points and the Neighbours with a common side with the current triangle
-      computeVertexPoints(neighbours, currentT, commonSideNeighbours,
-                          adjacents);
+      vector<vector<Triangle>> neighbours = getNeighbours(currentT);
+      /// All the direct adjacent vertices to each point of the triangle
+	  vector<Triple> vertexTriples = computeVertexTriples(currentT, neighbours);
       /// Compute the Edge Points
-      computeEdgePoints(currentT, commonSideNeighbours, edgePoints);
-      /// Add the new Points
-	  size_t newVSIZE = newVertices.size();;
-      size_t vertexPointsIndices[3];
-	  size_t edgePointsIndices[3];
-      Vector vertexPoint, edgePoint;
-	  int foundIndex;
-	  /// Add the new vertexPoints
-      for (size_t j = 0; j < 3; j++) {
-        vertexPoint = getVertexPoint(vertices[currentT.v[j]], adjacents[j]);
-		foundIndex = memberOf(newVertices, vertexPoint);
-        if (foundIndex == -1) {
-			newVertices.push_back(vertexPoint);
-			vertexPointsIndices[j] = newVSIZE;
-			newVSIZE++;
-        } 
-		else {
-			vertexPointsIndices[j] = foundIndex;
-        }
-      }
+      vector<Triple> edgeTriples = computeEdgePoints(currentT, neighbours[1]);
+	  /// Collect all the edgepoints in this array
+	  vector<TripleIndices> vertexIndices = addTo(vertexTriples, newVertices, newNormals, newUvs);
+	  vector<TripleIndices> edgeIndices = addTo(edgeTriples, newVertices, newNormals, newUvs);
+
 	  /// Add the new edge Points
-      for (size_t j = 0; j < 3; j++) {
-		  foundIndex = memberOf(newVertices, edgePoints[j]);
-		  if (foundIndex == -1) {
-			  newVertices.push_back(edgePoints[j]);
-			  edgePointsIndices[j] = newVSIZE;
-			  newVSIZE++;;
-		  }
-		  else {
-			  edgePointsIndices[j] = foundIndex;
-		  }
-      }
-      addNewTriangles(newVertices, newTriangles, currentT,
-                      vertexPointsIndices, edgePointsIndices);
+      addNewTriangles(newTriangles, newVertices, vertexIndices, edgeIndices);
     }
     // Change the current mesh's Ts, Vs, uvs and normals with the new one
     triangles = newTriangles;
+	normals = newNormals;
+	uvs = newUvs;
     vertices = newVertices;
-  }
-  if (!faceted){
-	  autoSmooth = true;
-	  normals.clear();
   }
 }
 

@@ -15,7 +15,7 @@ GlobalSettings {
 	frameHeight         480
 	ambientLight        (0.5, 0.5, 0.5)
 	interactive true
-	fullscreen true
+	fullscreen false
 }
 
 PointLight sun {
@@ -118,7 +118,7 @@ Mesh heart {
 
 Node heart {
 	geometry heart
-	shader   heart_phong
+	shader   lava_lambert
 	translate (-60, 60, -60)
 	scale (20, 20, 20)
 	rotate (90, 0, 0)
