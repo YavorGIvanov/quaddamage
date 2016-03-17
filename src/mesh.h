@@ -63,7 +63,7 @@ struct KDTreeNode {
  * in one. It is useful to work with them while calculating every new vertex, 
  * normal and uv coordinate with a similiar scheme */
 struct Triple {
-	Triple(){}
+	Triple() { vertex.makeZero(); normal.makeZero(); uv.makeZero(); }
 	Triple(Vector v, Vector n, Vector uv) : vertex(v), normal(n), uv(uv){}
 	Vector vertex, normal, uv;
 	Triple &operator+=(const Triple& other);
@@ -75,6 +75,7 @@ Triple operator+(Triple left, const Triple& right);
 Triple operator*(double scalar, Triple current);
 
 struct TripleIndices {
+	TripleIndices(size_t v=0, size_t n=0, size_t uv=0) : v(v), n(n), uv(uv) {}
 	size_t v, n, uv;
 };
 
@@ -103,7 +104,7 @@ class Mesh: public Geometry {
                                   vector<Triple> &adjacent);
     vector<vector<Triangle>> getNeighbours(const Triangle &currTriangle) const;
     vector<Triple> computeEdgePoints(const Triangle &currentT,
-                                     const vector<Triangle> &closeNeighbours) const;
+                                     vector<Triangle> &closeNeighbours) const;
 	vector<Triple> computeVertexTriples(const Triangle &currentT,
                                         const vector<vector<Triangle>> &neighbours) const;
     void addNewTriangles(vector<Triangle> &newTriangles,
