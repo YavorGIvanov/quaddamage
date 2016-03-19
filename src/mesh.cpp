@@ -284,7 +284,7 @@ vector<Triple> Mesh::computeVertexTriples(const Triangle &currentT,
 		currTVertex.normal = normals[currentT.n[j]];
 		currTVertex.uv = uvs[currentT.t[j]];
 		current = getVertexTriple(currTVertex, adjacents[j]);
-		vertexTriples.push_back(current);
+		vertexTriples[j] = current;
 	}
 	return vertexTriples;
 }

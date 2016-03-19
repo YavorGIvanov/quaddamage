@@ -73,8 +73,8 @@ Node floor {
 
 CheckerTexture checker {
 	color1	(0.5, 0.0, 0.0)
-	color2	(0.5, 0.0, 0.0)
-	scaling 100
+	color2	(0.0, 0.5, 0.0)
+	scaling 20
 }
 
 CheckerTexture checker2 {
@@ -85,7 +85,7 @@ CheckerTexture checker2 {
 
 BitmapTexture lava_tex {
 	file "texture/lava.bmp"
-	scaling 10
+	scaling 5
 }
 
 Lambert heart_lambert {
@@ -106,48 +106,43 @@ Phong cube_phong {
 	specularExponent  32
 }
 
-Refl puramid_refl {
-	
+Mesh heart {
+	file "geom/heart.obj"
+	subdivSteps 1
 }
 
+Node heart {
+	geometry heart
+	shader   heart_lambert
+	translate (-60, 60, -60)
+	scale (20, 20, 20)
+	rotate (90, 0, 0)
+}
 
-//Mesh heart {
-//	file "geom/heart.obj"
-//	subdivSteps 1
-//}
+Mesh heart2 {
+	file "geom/heart.obj"
+	subdivSteps 0
+}
 
-//Node heart {
-//	geometry heart
-//	shader   lava_lambert
-//	translate (-60, 60, -60)
-//	scale (20, 20, 20)
-//	rotate (90, 0, 0)
-//}
+Node heart2 {
+	geometry heart2
+	shader   heart_lambert
+	translate (-60, 160, -60)
+	scale (20, 20, 20)
+	rotate (90, 0, 0)
+}
 
-//Mesh heart2 {
-//	file "geom/heart.obj"
-//	subdivSteps 0
-//}
-
-//Node heart2 {
-//	geometry heart2
-//	shader   heart_phong
-//	translate (-60, 160, -60)
-//	scale (20, 20, 20)
-//	rotate (90, 0, 0)
-//}
-
-///Mesh teapot {
-///	file "geom/teapot_lowres.obj"
-//	faceted false
-//	subdivSteps 1
-//}
-//Node teapot {
-//	geometry teapot
-//	shader cube_phong
-//	translate (-50, 0, 0)
-//	scale (55, 55, 55)
-//}
+Mesh teapot {
+	file "geom/teapot_lowres.obj"
+	faceted false
+	subdivSteps 1
+}
+Node teapot {
+	geometry teapot
+	shader lava_lambert
+	translate (100, 80, 0)
+	scale (55, 55, 55)
+}
 
 //Mesh truncated_cube  {
 //	file "geom/truncated_cube.obj"
@@ -193,9 +188,10 @@ Refl puramid_refl {
 
 Mesh cube  {
 	file "geom/cube.obj"
-	subdivSteps 1
+	subdivSteps 2
 	//autoSmooth true
 	faceted true
+	backfaceCulling true
 }
 
 
@@ -206,18 +202,18 @@ Node cube {
 	scale (80, 80, 40)
 }
 
-//Mesh cube2 {
-//	file "geom/cube.obj"
-//	subdivSteps 4
-//	faceted false
-//}
+Mesh cube2 {
+	file "geom/cube.obj"
+	subdivSteps 4
+	faceted false
+}
 
-//Node cube2 {
-//	geometry cube2
-//	shader cube_phong
-//	translate (100, 50, -20)
-//	scale (80, 80, 80)
-//}
+Node cube2 {
+	geometry cube2
+	shader cube_phong
+	translate (100, 50, -20)
+	scale (80, 80, 80)
+}
 //Mesh pyramid  {
 //	file "geom/3pyramid.obj"
 //	subdivSteps 2
